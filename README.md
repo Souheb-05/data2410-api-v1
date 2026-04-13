@@ -5,7 +5,7 @@ A simple ASP.NET Core Web API for managing students, built with .NET 10 and Azur
 ## Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- [SQL Server 2025 Developer](https://www.microsoft.com/en-us/sql-server/sql-server-downloads) (free for development and educational use)
+- [SQL Server 2025 Developer](https://www.microsoft.com/en-us/sql-server/sql-server-downloads) (Download **Standard Developer edition** — free for development and educational use)
 
 ## Clone the Repository
 
@@ -16,7 +16,7 @@ cd data2410-api-v1
 
 ## Local Database Setup
 
-Download and install [SQL Server 2025 Developer](https://www.microsoft.com/en-us/sql-server/sql-server-downloads) — it is **free for development and educational use**.
+Download and install [SQL Server 2025 Developer](https://www.microsoft.com/en-us/sql-server/sql-server-downloads) — select the **Standard Developer edition** which is **free for development and educational use**.
 
 You can also install [SQL Server Management Studio (SSMS)](https://learn.microsoft.com/en-us/ssms/download-sql-server-management-studio-ssms) to manage your database visually.
 
@@ -69,25 +69,27 @@ https://localhost:7010/scalar/v1
 | PUT | `/api/Students/{id}` | Update a student |
 | DELETE | `/api/Students/{id}` | Delete a student |
 | POST | `/api/Students/calculate-grades` | Calculate grades for all students |
-| GET | `/api/Students/report` | Generate student report |
+| GET | `/api/Students/report` | Generate course wise report of results |
 | GET | `/health` | Check database connectivity |
 
 ### Example: Create a Student
 
-```bash
-curl -X POST https://localhost:7010/api/Students \
-  -H "Content-Type: application/json" \
-  -d '{"name": "John Doe", "course": "DATA2410", "marks": 85}'
+Using **Scalar** (built-in at `/scalar/v1`) or **[Postman](https://www.postman.com/downloads/)**, send a `POST` request to:
+
+```
+POST https://localhost:7010/api/Students
 ```
 
-### Grading Scale
+With the following JSON body:
 
-| Marks | Grade |
-|-------|-------|
-| 90+ | A |
-| 80–89 | B |
-| 60–79 | C |
-| Below 60 | D |
+```json
+{
+  "name": "John Doe",
+  "course": "DATA2410",
+  "marks": 85
+}
+```
+
 
 ## Project Structure
 

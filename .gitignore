@@ -28,4 +28,3 @@ Properties/serviceDependencies*.json
 # Visual Studio
 .vs/
 *.csproj.user
-launchSettings.json
