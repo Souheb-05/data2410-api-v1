@@ -97,22 +97,94 @@ public class StudentsController(IConfiguration config) : ControllerBase
         return rows == 0 ? NotFound() : NoContent();
     }
 
-    [HttpPost("calculate-grades")]
-    public async Task<ActionResult<List<Student>>> CalculateGrades()
+   [HttpPost("calculate-grades")]
+public async Task<ActionResult<List<Student>>> CalculateGrades()
+{
+    var studentsWithGrade = new List<Student>();
+
+    using var conn = new SqlConnection(_connectionString);
+    await conn.OpenAsync();
+
+    // 1. Hent alle studenter
+    using var selectCmd = new SqlCommand("SELECT Id, Name, Course, Marks FROM Students", conn);
+    using var reader = await selectCmd.ExecuteReaderAsync();
+
+    var students = new List<Student>();
+
+    while (await reader.ReadAsync())
     {
-        var studentsWithGrade = new List<Student>();
-
-        // Write code to calculate and update grades
-
-        return studentsWithGrade;
+        students.Add(new Student
+        {
+            Id = reader.GetInt32(0),
+            Name = reader.GetString(1),
+            Course = reader.GetString(2),
+            Marks = reader.GetInt32(3)
+        });
     }
+
+    reader.Close();
+
+    // 2. Beregn karakter + oppdater DB
+    foreach (var student in students)
+    {
+        var grade = GetGrade(student.Marks);
+
+        using var updateCmd = new SqlCommand(
+            "UPDATE Students SET Grade = @grade WHERE Id = @id", conn);
+
+        updateCmd.Parameters.AddWithValue("@grade", grade);
+        updateCmd.Parameters.AddWithValue("@id", student.Id);
+
+        await updateCmd.ExecuteNonQueryAsync();
+
+        student.Grade = grade;
+        studentsWithGrade.Add(student);
+    }
+
+    return studentsWithGrade;
+}
 
     [HttpGet("report")]
     public async Task<IActionResult> Report()
     {
-        // Write code for the report generation logic.
-        return Ok();
-    }
+        var report = new List<object>();
+
+using var conn = new SqlConnection(_connectionString);
+await conn.OpenAsync();
+
+var query = @"
+    SELECT 
+        Course,
+        COUNT(*) AS TotalStudents,
+        AVG(CAST(Marks AS FLOAT)) AS AverageMarks,
+        SUM(CASE WHEN Grade = 'A' THEN 1 ELSE 0 END) AS A,
+        SUM(CASE WHEN Grade = 'B' THEN 1 ELSE 0 END) AS B,
+        SUM(CASE WHEN Grade = 'C' THEN 1 ELSE 0 END) AS C,
+        SUM(CASE WHEN Grade = 'D' THEN 1 ELSE 0 END) AS D
+    FROM Students
+    GROUP BY Course";
+
+using var cmd = new SqlCommand(query, conn);
+using var reader = await cmd.ExecuteReaderAsync();
+
+while (await reader.ReadAsync())
+{
+    report.Add(new
+    {
+        courseName = reader.GetString(0),
+        totalStudents = reader.GetInt32(1),
+        averageMarks = reader.GetDouble(2),
+        gradeDistribution = new
+        {
+            A = reader.GetInt32(3),
+            B = reader.GetInt32(4),
+            C = reader.GetInt32(5),
+            D = reader.GetInt32(6)
+        }
+    });
+}
+
+return Ok(report);
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
