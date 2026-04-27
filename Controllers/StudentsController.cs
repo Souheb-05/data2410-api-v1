@@ -97,15 +97,50 @@ public class StudentsController(IConfiguration config) : ControllerBase
         return rows == 0 ? NotFound() : NoContent();
     }
 
-    [HttpPost("calculate-grades")]
-    public async Task<ActionResult<List<Student>>> CalculateGrades()
+   [HttpPost("calculate-grades")]
+public async Task<ActionResult<List<Student>>> CalculateGrades()
+{
+    using var conn = new SqlConnection(_connectionString);
+    await conn.OpenAsync();
+
+    var students = new List<Student>();
+
+    // Hent alle studenter
+    using (var cmd = new SqlCommand("SELECT * FROM Students", conn))
+    using (var reader = await cmd.ExecuteReaderAsync())
     {
-        var studentsWithGrade = new List<Student>();
-
-        // Write code to calculate and update grades
-
-        return studentsWithGrade;
+        while (await reader.ReadAsync())
+        {
+            students.Add(new Student
+            {
+                id = (int)reader["Id"],
+                name = reader["Name"].ToString(),
+                course = reader["Course"].ToString(),
+                marks = (int)reader["Marks"],
+                grade = reader["Grade"] as string
+            });
+        }
     }
+
+    // Beregn karakter
+    foreach (var student in students)
+    {
+        if (student.marks >= 90) student.grade = "A";
+        else if (student.marks >= 80) student.grade = "B";
+        else if (student.marks >= 70) student.grade = "C";
+        else if (student.marks >= 60) student.grade = "D";
+        else student.grade = "F";
+
+        // Oppdater database
+        using var updateCmd = new SqlCommand(
+            "UPDATE Students SET Grade = @Grade WHERE Id = @Id", conn);
+        updateCmd.Parameters.AddWithValue("@Grade", student.grade);
+        updateCmd.Parameters.AddWithValue("@Id", student.id);
+        await updateCmd.ExecuteNonQueryAsync();
+    }
+
+    return students;
+}
 
     [HttpGet("report")]
     public async Task<IActionResult> Report()
